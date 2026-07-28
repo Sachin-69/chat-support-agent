@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support Assistant</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --accent: #38bdf8;
+      --user: #2563eb;
+      --bot: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+    .app {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      padding: 16px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid #334155;
+    }
+    header h1 { margin: 0; font-size: 18px; }
+    header p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+    #status { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .msg { max-width: 85%; padding: 12px 14px; border-radius: 12px; line-height: 1.45; white-space: pre-wrap; }
+    .msg.user { align-self: flex-end; background: var(--user); border-bottom-right-radius: 2px; }
+    .msg.bot { align-self: flex-start; background: var(--bot); border-bottom-left-radius: 2px; }
+    .msg.refusal { background: #7f1d1d; }
+    .sources { margin-top: 10px; font-size: 12px; color: var(--muted); border-top: 1px solid #475569; padding-top: 8px; }
+    .sources b { color: var(--accent); }
+    .src-item { margin-top: 6px; }
+    form {
+      display: flex;
+      gap: 10px;
+      padding: 14px 20px;
+      background: var(--panel);
+      border-top: 1px solid #334155;
+    }
+    input {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid #475569;
+      background: #0b1220;
+      color: var(--text);
+      font-size: 15px;
+    }
+    input:focus { outline: 2px solid var(--accent); }
+    button {
+      padding: 0 20px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #06283d;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 15px;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .typing { color: var(--muted); font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Support Assistant</h1>
+      <p>I answer questions using only the official support documentation.</p>
+      <div id="status">Connecting…</div>
+    </header>
+    <div id="chat"></div>
+    <form id="form">
+      <input id="input" type="text" placeholder="Ask a support question…" autocomplete="off" />
+      <button id="send" type="submit">Send</button>
+    </form>
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("send");
+    const statusEl = document.getElementById("status");
+
+    function addMessage(text, cls) {
+      const div = document.createElement("div");
+      div.className = "msg " + cls;
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      return div;
+    }
+
+    function addSources(container, sources) {
+      if (!sources || !sources.length) return;
+      const box = document.createElement("div");
+      box.className = "sources";
+      box.innerHTML = "<b>Sources</b>";
+      sources.forEach((s) => {
+        const item = document.createElement("div");
+        item.className = "src-item";
+        item.textContent = `• ${s.doc} — ${s.title} (score ${s.score})`;
+        box.appendChild(item);
+      });
+      container.appendChild(box);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function loadStatus() {
+      try {
+        const r = await fetch("/api/health");
+        const d = await r.json();
+        statusEl.textContent = `Provider: ${d.provider} · Docs: ${d.docs_indexed} · Chunks: ${d.chunks_indexed}`;
+      } catch {
+        statusEl.textContent = "Backend unavailable.";
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const message = input.value.trim();
+      if (!message) return;
+      addMessage(message, "user");
+      input.value = "";
+      sendBtn.disabled = true;
+      const typing = addMessage("Assistant is typing…", "bot typing");
+
+      try {
+        const r = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+        const data = await r.json();
+        typing.remove();
+        if (!r.ok) {
+          addMessage(data.detail || "Something went wrong.", "bot refusal");
+        } else {
+          const cls = data.grounded ? "bot" : "bot refusal";
+          const el = addMessage(data.answer, cls);
+          addSources(el, data.sources);
+        }
+      } catch {
+        typing.remove();
+        addMessage("Network error. Is the server running?", "bot refusal");
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    });
+
+    loadStatus();
+    addMessage("Hi! Ask me anything about our product and I'll help using the support docs.", "bot");
+    input.focus();
+  </script>
+</body>
+</html>
