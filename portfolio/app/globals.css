@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #f4f1ea;
+  color: #0e1512;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: #12b878;
+  color: #06120d;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 11px;
+}
+::-webkit-scrollbar-track {
+  background: #f4f1ea;
+}
+::-webkit-scrollbar-thumb {
+  background: #cdc7ba;
+  border-radius: 999px;
+  border: 3px solid #f4f1ea;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0f7a52;
+}
+
+@layer components {
+  /* Section label: mono kicker */
+  .kicker {
+    @apply inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-emerald;
+  }
+  .kicker::before {
+    content: "";
+    @apply inline-block h-1.5 w-1.5 rounded-full bg-emerald;
+  }
+
+  /* Big editorial display heading */
+  .display {
+    @apply font-serif font-semibold tracking-tightest leading-[0.92];
+  }
+}
+
+@layer utilities {
+  /* subtle paper grain */
+  .grain::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.4;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  }
+
+  .dotted {
+    background-image: radial-gradient(#0e151212 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  .underline-emerald {
+    text-decoration: underline;
+    text-decoration-color: #12b878;
+    text-decoration-thickness: 0.12em;
+    text-underline-offset: 0.15em;
+  }
+}
